@@ -18,14 +18,14 @@ class thumbnail(SQLModel, table = True):
     imagekit_url: Optional[str] = Field(default=None)
     status: str = Field(default= "pending")
     error_message: Optional[str] = Field(default= None)
-    created_at: datetime = Field(default= _now)
+    created_at: datetime = Field(default_factory=_now)
 
     job: Optional["Job"] = Relationship(back_populates="thumbnails")
 
 class Job(SQLModel,table = True):
     id: str = Field(default_factory=_uuid,primary_key=True)
     prompt: str = Field(default="")
-    num_thumbnails: int = Field(default="")
+    num_thumbnails: int = Field(default=1)
     headshot_url: str = Field(default="")
     status: str = Field(default="pending")
 

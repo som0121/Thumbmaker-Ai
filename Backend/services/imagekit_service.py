@@ -1,8 +1,8 @@
 from imagekitio import ImageKit
 
-from config import IMAGEKIT_PRIVATE_KEY, IMAGEKIT_URL_ENDPOINT
+from config import IMAGEKIT_PRIVATE_KEY
 
-ImageKit = ImageKit(private_key=IMAGEKIT_PRIVATE_KEY)
+imagekit = ImageKit(private_key=IMAGEKIT_PRIVATE_KEY)
 
 
 def upload_file(file_bytes: bytes, file_name: str, folder:str,content_type:
@@ -10,13 +10,16 @@ def upload_file(file_bytes: bytes, file_name: str, folder:str,content_type:
 
     """upload a file to ImageKit and return the CDN URL."""
 
-    result = ImageKit.files.upload(
+    result = imagekit.files.upload(
         file = (file_name, file_bytes, content_type),
         file_name = file_name,
         folder = folder,
         is_private_file= False,
         use_unique_file_name= True,
     )
+
+    if not result.url:
+        raise RuntimeError("ImageKit upload did not return a URL")
 
     return result.url
 

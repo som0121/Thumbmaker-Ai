@@ -18,21 +18,21 @@ async def generate_thumbnail(prompt:str, style_prompt:str, headshot_url:str)-> b
         f"{style_prompt}\n\n"
         f"User request: {prompt}\n\n"
 
-        "IMPORTANT: The generated thumbnail MUST prominently feature the person"
+        "IMPORTANT: The generated thumbnail MUST prominently feature the person "
 
-        "show in the provided reference headshot photo. Keep their likeness accurate."
+        "shown in the provided reference headshot photo. Keep their likeness accurate."
     
     )   
 
-    response = client.responses.create(
+    response = await client.responses.create(
     model="gpt-6-astra",
     input= [
 
         {
             "role": "user",
             "content": [
-                {"type": "input_image","url": headshot_url},
-                {"type": "text", "text": full_prompt}
+                {"type": "input_image","image_url": headshot_url},
+                {"type": "input_text", "text": full_prompt}
 
             ]
         }
