@@ -39,6 +39,7 @@ class ThumbnailResponse(BaseModel):
     style_name: str
     status: str
     imagekit_url: str | None = None
+    error_message: str | None = None
     variants: dict | None = None
 
 class JobResponse(BaseModel):
@@ -105,11 +106,11 @@ def get_job(job_id: str, session:Session = Depends(get_session)):
     if job is None:
         raise HTTPException(status_code=404, detail= "Job not found")
 
-    thumbnails = session.exec(select(thumbnail).where(thumbnail.job_id == job_id).all())
+    thumbnails = session.exec(select(thumbnail).where(thumbnail.job_id == job_id)).all()
 
     thumb_response = []
 
-    for t in thumbnail:
+    for t in thumbnails:
         variants = get_variants(t.imagekit_url) if t.imagekit_url else None
         thumb_response.append(
             ThumbnailResponse(
@@ -142,7 +143,8 @@ async def steam_job(job_id:str):
             with Session(engine) as session:
                 job = session.get(Job, job_id)
                 if not job:
-                    yield f"event: error\ndata: {json.dumps({'error':"job not found"})}"
+                    data = json.dumps({"error": "job not found"})
+                    yield f"event: error\ndata: {data}\n\n"
                     return
                 thumbnails = session.exec(
                     select(thumbnail).where(thumbnail.job_id == job_id)
@@ -161,29 +163,30 @@ async def steam_job(job_id:str):
                             "variants":  variants
                         })
 
-                        yield f"event: thumbnail ready\n data: {data}"
+                        yield f"event: thumbnail_ready\ndata: {data}\n\n"
                         sent_thumbnails.add(t.id)
 
-                    elif t.status == "failed":
+                    elif t.status == "error":
 
                         data = json.dumps({
                                 "thumbnail_id": t.id,
                                 "style_name": t.style_name,
                                 "error": t.error_message
-                        })          
+                        })
 
-                        yield f"event: thumbnail ready\n data:{data}"
+                        yield f"event: thumbnail_failed\ndata: {data}\n\n"
                         sent_thumbnails.add(t.id)
 
+                # wait for process_job to set the final job status before closing
+                all_sent = len(sent_thumbnails) == len(thumbnails)
 
-                    all_done = all(t.status in ("uploaded", "failed") for t in thumbnails)
+                if all_sent and job.status in ("completed", "failed"):
+                    data = json.dumps({"job_id": job_id, "status":job.status})
 
-                    if all_done and len(sent_thumbnails) == len(thumbnails):
-                        data = json.dumps({"job_id": job_id, "status":job.status})
+                    yield f"event: job_completed\ndata: {data}\n\n"
+                    return
 
-                        yield f"event: job completed\n data: {data}"
-                        return
-                    
+
             await asyncio.sleep(1.5)
     return StreamingResponse(
 
