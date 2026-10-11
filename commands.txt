@@ -1,0 +1,6 @@
+#backend
+uvicorn main:app --reload --port 8080
+
+#frontend
+cd frontend/vite-project
+npm run dev

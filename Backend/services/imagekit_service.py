@@ -10,6 +10,9 @@ def upload_file(file_bytes: bytes, file_name: str, folder:str,content_type:
 
     """upload a file to ImageKit and return the CDN URL."""
 
+    if not IMAGEKIT_PRIVATE_KEY:
+        raise RuntimeError("IMAGEKIT_PRIVATE_KEY is not set in Backend/.env")
+
     result = imagekit.files.upload(
         file = (file_name, file_bytes, content_type),
         file_name = file_name,

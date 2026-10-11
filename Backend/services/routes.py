@@ -55,13 +55,17 @@ async def upload_headshot(file: UploadFile = File(...)):
 
     contents = await file.read()
     
-    url = upload_file(
-        file_bytes= contents,
-        file_name= file.filename or "headshot.jpg",
-        folder = "headshots",
-        content_type= file.content_type or "image/png"
+    try:
+        url = upload_file(
+            file_bytes= contents,
+            file_name= file.filename or "headshot.jpg",
+            folder = "headshots",
+            content_type= file.content_type or "image/png"
 
-    )
+        )
+    except Exception as e:
+        logger.exception("Headshot upload failed")
+        raise HTTPException(status_code=502, detail= f"Headshot upload to ImageKit failed: {e}")
 
     return {"url": url}
 

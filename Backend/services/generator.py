@@ -5,7 +5,7 @@ from sqlmodel import Session, select
 from database import engine
 from models import Job, thumbnail
 
-from services.openai_services import generate_thumbnail
+from services.openrouter_services import generate_thumbnail
 from services.imagekit_service import upload_file
 
 logger = logging.getLogger(__name__)
@@ -57,12 +57,15 @@ async def generate_single_thumbnail(thumbnail_id:str, prompt:str, headshot_url:s
 
         image_byte = await generate_thumbnail(prompt,style_prompt,headshot_url)
 
-        #upload this image
+        #upload this image (the model may return JPEG instead of PNG)
+
+        is_jpeg = image_byte[:3] == b"\xff\xd8\xff"
 
         url = upload_file(
                 file_bytes= image_byte,
-                file_name= f"{thumbnail_id}.png",
+                file_name= f"{thumbnail_id}.jpg" if is_jpeg else f"{thumbnail_id}.png",
                 folder = f"thumbnails/{job_id}",
+                content_type= "image/jpeg" if is_jpeg else "image/png",
             )
         
     #DB call save the url + mark uploaded
