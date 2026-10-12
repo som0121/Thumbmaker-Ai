@@ -1,7 +1,10 @@
 import base64
+import logging
 import httpx
 
 from config import OPENROUTER_API_KEY
+
+logger = logging.getLogger(__name__)
 
 OPENROUTER_IMAGES_URL = "https://openrouter.ai/api/v1/images"
 IMAGE_MODEL = "google/gemini-nano-banana-2.1"
@@ -43,7 +46,12 @@ async def generate_thumbnail(prompt:str, style_prompt:str, headshot_url:str)-> b
     if response.status_code != 200:
         raise RuntimeError(f"OpenRouter error {response.status_code}: {response.text}")
 
-    for image in response.json().get("data", []):
+    result = response.json()
+
+    usage = result.get("usage") or {}
+    logger.info(f"OpenRouter usage for {IMAGE_MODEL}: cost=${usage.get('cost')} usage={usage}")
+
+    for image in result.get("data", []):
         if image.get("b64_json"):
             return base64.b64decode(image["b64_json"])
 

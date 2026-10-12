@@ -7,6 +7,8 @@ from database import create_tables
 from services.routes import router
 from services.auth import router as auth_router
 
+logging.basicConfig(level=logging.INFO)
+
 @asynccontextmanager
 async def lifespan(app:FastAPI):
     create_tables()
