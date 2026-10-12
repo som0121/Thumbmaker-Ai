@@ -11,11 +11,13 @@ from sqlalchemy.orm import selectinload
 from sqlmodel import Session, select
 from database import get_session
 
-from models import Job, thumbnail
+from models import Job, User, thumbnail
 
 from services.generator import process_job, STYLE_ORDER
 
 from services.imagekit_service import upload_file, get_variants
+
+from services.auth import get_current_user
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +53,7 @@ class JobResponse(BaseModel):
     thumbnails: list[ThumbnailResponse]
 
 @router.post("/upload-headshot")
-async def upload_headshot(file: UploadFile = File(...)):
+async def upload_headshot(file: UploadFile = File(...), user: User = Depends(get_current_user)):
 
     contents = await file.read()
     
@@ -70,7 +72,8 @@ async def upload_headshot(file: UploadFile = File(...)):
     return {"url": url}
 
 @router.post("/jobs", response_model = CreateJobResponse)
-async def create_job(request:CreateJobrequest, session: Session =  Depends (get_session)):
+async def create_job(request:CreateJobrequest, session: Session =  Depends (get_session),
+                     user: User = Depends(get_current_user)):
 
     if request.num_thumbnails < 1 or request.num_thumbnails > 3:
         raise HTTPException(status_code=400, detail= "num_thumbnails must be between 1 and 3")
@@ -78,6 +81,7 @@ async def create_job(request:CreateJobrequest, session: Session =  Depends (get_
 
     job = Job(
 
+        user_id = user.id,
         prompt = request.prompt,
         num_thumbnails= request.num_thumbnails,
         headshot_url= request.headshot_url,
@@ -102,12 +106,14 @@ async def create_job(request:CreateJobrequest, session: Session =  Depends (get_
     return CreateJobResponse(job_id = job_id)
 
 @router.get("/jobs/{job_id}", response_model=JobResponse)
-def get_job(job_id: str, session:Session = Depends(get_session)):
+def get_job(job_id: str, session:Session = Depends(get_session),
+            user: User = Depends(get_current_user)):
     job = session.exec(
         select(Job).where(Job.id == job_id).options(selectinload(Job.thumbnails))
     ).first()
 
-    if job is None:
+    # 404 (not 403) so other users cannot tell which job ids exist
+    if job is None or job.user_id != user.id:
         raise HTTPException(status_code=404, detail= "Job not found")
 
     thumbnails = session.exec(select(thumbnail).where(thumbnail.job_id == job_id)).all()
@@ -137,7 +143,16 @@ def get_job(job_id: str, session:Session = Depends(get_session)):
     )
 
 @router.get("/jobs/{job_id}/stream")
-async def steam_job(job_id:str):
+async def steam_job(job_id:str, session: Session = Depends(get_session),
+                    user: User = Depends(get_current_user)):
+
+    job = session.get(Job, job_id)
+    if job is None or job.user_id != user.id:
+        raise HTTPException(status_code=404, detail= "Job not found")
+
+    # release the connection before the long lived stream starts
+    session.close()
+
     async def event_generator():
 
         from database import engine

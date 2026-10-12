@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { createJob, subscribeToJob, uploadHeadshot } from './api'
+import { createJob, getCurrentUser, logout, subscribeToJob, uploadHeadshot } from './api'
+import LoginScreen from './components/LoginScreen'
 import ThumbnailForm from './components/ThumbnailForm'
 import ThumbnailCard from './components/ThumbnailCard'
 import './App.css'
@@ -11,6 +12,8 @@ const BUSY_LABELS = {
 }
 
 function App() {
+  // undefined = still checking the session, null = signed out
+  const [user, setUser] = useState(undefined)
   // idle | uploading | starting | generating | done
   const [phase, setPhase] = useState('idle')
   const [jobId, setJobId] = useState(null)
@@ -18,6 +21,13 @@ function App() {
   const [expected, setExpected] = useState(0)
   const [thumbnails, setThumbnails] = useState([])
   const [error, setError] = useState(null)
+
+  // restore the session from the cookie on page load
+  useEffect(() => {
+    getCurrentUser()
+      .then(setUser)
+      .catch(() => setUser(null))
+  }, [])
 
   // 3. subscribe to SSE once the job exists
   useEffect(() => {
@@ -81,6 +91,22 @@ function App() {
     }
   }
 
+  async function handleLogout() {
+    try {
+      await logout()
+    } finally {
+      setUser(null)
+      setJobId(null)
+      setJobStatus(null)
+      setThumbnails([])
+      setError(null)
+      setPhase('idle')
+    }
+  }
+
+  if (user === undefined) return null
+  if (user === null) return <LoginScreen onLogin={setUser} />
+
   const busy = phase !== 'idle' && phase !== 'done'
 
   // placeholders for thumbnails the stream has not reported yet
@@ -95,8 +121,15 @@ function App() {
   return (
     <div className="app">
       <header className="header">
-        <h1>ThumbMaker</h1>
-        <p>Upload a headshot, describe your video, and get AI-generated YouTube thumbnails.</p>
+        <div>
+          <h1>ThumbMaker</h1>
+          <p>Upload a headshot, describe your video, and get AI-generated YouTube thumbnails.</p>
+        </div>
+        <div className="user">
+          {user.picture && <img src={user.picture} alt="" referrerPolicy="no-referrer" />}
+          <span>{user.name || user.email}</span>
+          <button type="button" className="secondary" onClick={handleLogout}>Sign out</button>
+        </div>
       </header>
 
       <main className="layout">

@@ -13,6 +13,30 @@ async function parseResponse(res, fallbackMessage) {
     return res.json();
 }
 
+// Exchanges the Google ID token for a session cookie; returns the user.
+export async function loginWithGoogle(credential) {
+    const res = await fetch(`${API_BASE}/auth/google`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ credential }),
+    });
+    return parseResponse(res, "Failed to sign in");
+}
+
+// Returns the signed in user, or null when there is no valid session.
+export async function getCurrentUser() {
+    const res = await fetch(`${API_BASE}/auth/me`);
+    if (res.status === 401) return null;
+    return parseResponse(res, "Failed to load user");
+}
+
+export async function logout() {
+    const res = await fetch(`${API_BASE}/auth/logout`, { method: "POST" });
+    return parseResponse(res, "Failed to sign out");
+}
+
 export async function uploadHeadshot(file) {
     const formData = new FormData();
     formData.append("file", file);

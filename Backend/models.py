@@ -11,6 +11,14 @@ def _uuid():
 def _now():
     return datetime.now(timezone.utc)
 
+class User(SQLModel, table = True):
+    id: str = Field(default_factory=_uuid,primary_key=True)
+    google_sub: str = Field(unique=True, index=True)
+    email: str = Field(default="")
+    name: str = Field(default="")
+    picture: Optional[str] = Field(default=None)
+    created_at: datetime = Field(default_factory=_now)
+
 class thumbnail(SQLModel, table = True):
     id: str = Field(default_factory=_uuid,primary_key=True)
     job_id: str = Field(foreign_key= "job.id")
@@ -24,6 +32,7 @@ class thumbnail(SQLModel, table = True):
 
 class Job(SQLModel,table = True):
     id: str = Field(default_factory=_uuid,primary_key=True)
+    user_id: Optional[str] = Field(default=None, foreign_key="user.id", index=True)
     prompt: str = Field(default="")
     num_thumbnails: int = Field(default=1)
     headshot_url: str = Field(default="")
