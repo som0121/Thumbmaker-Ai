@@ -7,12 +7,12 @@ from config import OPENROUTER_API_KEY
 logger = logging.getLogger(__name__)
 
 OPENROUTER_IMAGES_URL = "https://openrouter.ai/api/v1/images"
-IMAGE_MODEL = "google/gemini-nano-banana-2.1"
+IMAGE_MODEL = "google/gemini-3.1-flash-image"
 
 async def generate_thumbnail(prompt:str, style_prompt:str, headshot_url:str)-> bytes:
 
     """ 
-        Use the OpenRouter Image API with gemini-nano-banana-2.1.
+        Use the OpenRouter Image API with gemini-3.1-flash-image (Nano Banana 2).
 
         Pass the headshot URL directly as an input reference.
         Returns raw image bytes.
